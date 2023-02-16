@@ -1,4 +1,6 @@
 # Earthformer Training on EarthNet2021 with auxiliary meso scale data
+
+## Train Earthformer on EarthNet2021
 Run the following command to train Earthformer on EarthNet2021 dataset. 
 Change the configurations in [cfg.yaml](./cfg.yaml)
 ```bash
@@ -12,4 +14,9 @@ MASTER_ADDR=localhost MASTER_PORT=10001 python train_cuboid_earthnet.py --gpus 2
 Run the tensorboard command to upload experiment records
 ```bash
 tensorboard dev upload --logdir ./experiments/tmp_earthnet_w_meso/lightning_logs --name 'tmp_earthnet_w_meso'
+```
+
+## Evaluate Earthformer trained on EarthNet2021 on EarthNet2021x
+```bash
+python predict_cuboid_en21x.py
 ```
