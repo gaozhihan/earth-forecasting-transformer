@@ -437,7 +437,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
             # ddp
             accelerator="gpu",
             # strategy="ddp",
-            strategy=DDPStrategy(find_unused_parameters=False),
+            strategy=DDPStrategy(find_unused_parameters=True),
             # optimization
             max_epochs=self.oc.optim.max_epochs,
             check_val_every_n_epoch=self.oc.trainer.check_val_every_n_epoch,
@@ -614,9 +614,9 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         valid_mae = self.valid_mae.compute()
         valid_loss = valid_mse
 
-        self.log('valid_loss_epoch', valid_loss, prog_bar=True, on_step=False, on_epoch=True)
-        self.log('valid_mse_epoch', valid_mse, prog_bar=True, on_step=False, on_epoch=True)
-        self.log('valid_mae_epoch', valid_mae, prog_bar=True, on_step=False, on_epoch=True)
+        self.log('valid_loss_epoch', valid_loss, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
+        self.log('valid_mse_epoch', valid_mse, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
+        self.log('valid_mae_epoch', valid_mae, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
         self.valid_mse.reset()
         self.valid_mae.reset()
 
@@ -658,8 +658,8 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         test_mae = self.test_mae.compute()
 
         prefix = self.test_subset_name[self.test_epoch_count]
-        self.log(f'{prefix}_test_mse_epoch', test_mse, prog_bar=True, on_step=False, on_epoch=True)
-        self.log(f'{prefix}_test_mae_epoch', test_mae, prog_bar=True, on_step=False, on_epoch=True)
+        self.log(f'{prefix}_test_mse_epoch', test_mse, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
+        self.log(f'{prefix}_test_mae_epoch', test_mae, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
         self.test_mse.reset()
         self.test_mae.reset()
 
@@ -718,7 +718,7 @@ def get_parser():
     parser.add_argument('--pretrained', action='store_true',
                         help='Load pretrained checkpoints for test.')
     parser.add_argument('--ckpt_name', default=None, type=str,
-                        help='The model checkpoint trained on EarthNet2021.')
+                        help='The model checkpoint trained on EarthNet2021x.')
     return parser
 
 def main():
