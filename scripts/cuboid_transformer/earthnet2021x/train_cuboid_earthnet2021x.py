@@ -10,6 +10,7 @@ from torch.optim.lr_scheduler import LambdaLR, CosineAnnealingLR
 import torchmetrics
 import pytorch_lightning as pl
 from pytorch_lightning import Trainer, seed_everything, loggers as pl_loggers
+from pytorch_lightning.strategies.ddp import DDPStrategy
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, DeviceStatsMonitor, Callback
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from omegaconf import OmegaConf
@@ -24,7 +25,6 @@ from earthformer.utils.layout import layout_to_in_out_slice
 from earthformer.cuboid_transformer.cuboid_transformer_unet_dec import CuboidTransformerAuxModel
 from earthformer.datasets.earthnet.earthnet21x_dataloader import EarthNet2021xLightningDataModule, get_EarthNet2021x_dataloaders
 from earthformer.datasets.earthnet.visualization import vis_earthnet_seq
-from earthformer.utils.apex_ddp import ApexDDPStrategy
 
 
 _curr_dir = os.path.realpath(os.path.dirname(os.path.realpath(__file__)))
@@ -437,7 +437,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
             # ddp
             accelerator="gpu",
             # strategy="ddp",
-            strategy=ApexDDPStrategy(find_unused_parameters=False, delay_allreduce=True),
+            strategy=DDPStrategy(find_unused_parameters=False),
             # optimization
             max_epochs=self.oc.optim.max_epochs,
             check_val_every_n_epoch=self.oc.trainer.check_val_every_n_epoch,
