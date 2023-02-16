@@ -14,7 +14,7 @@ from ..augmentation import TransformsFixRotation
 from ...config import cfg
 
 
-default_data_dir = os.path.join(cfg.datasets_dir, "earthnet2021")
+default_data_dir = os.path.join(cfg.datasets_dir, "earthnet2021x")
 
 def change_layout(data: np.ndarray,
                   in_layout: str = "HWCT",
