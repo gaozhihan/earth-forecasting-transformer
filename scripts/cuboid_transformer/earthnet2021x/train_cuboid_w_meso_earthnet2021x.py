@@ -30,7 +30,7 @@ from earthformer.datasets.earthnet.visualization import vis_earthnet_seq
 _curr_dir = os.path.realpath(os.path.dirname(os.path.realpath(__file__)))
 exps_dir = os.path.join(_curr_dir, "experiments")
 pretrained_checkpoints_dir = cfg.pretrained_checkpoints_dir
-pytorch_state_dict_name = "earthformer_earthnet2021x.pt"
+pytorch_state_dict_name = "earthformeraux_earthnet2021x.pt"
 
 class CuboidEarthNet2021xPLModule(pl.LightningModule):
 
