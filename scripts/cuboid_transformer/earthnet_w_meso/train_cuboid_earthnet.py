@@ -23,7 +23,7 @@ from earthformer.utils.checkpoint import pl_ckpt_to_pytorch_state_dict, s3_downl
 from earthformer.utils.layout import layout_to_in_out_slice
 from earthformer.cuboid_transformer.cuboid_transformer_unet_dec import CuboidTransformerAuxModel
 from earthformer.datasets.earthnet.earthnet_dataloader import EarthNet2021LightningDataModule, get_EarthNet2021_dataloaders
-from earthformer.datasets.earthnet.earthnet_scores import EarthNet2021ScoreUpdateWithoutCompute
+from earthformer.datasets.earthnet.evaluation import EarthNet2021ScoreUpdateWithoutCompute
 from earthformer.datasets.earthnet.visualization import vis_earthnet_seq
 from earthformer.utils.apex_ddp import ApexDDPStrategy
 
