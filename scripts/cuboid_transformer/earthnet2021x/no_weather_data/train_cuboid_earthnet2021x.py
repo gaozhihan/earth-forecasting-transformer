@@ -556,7 +556,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
-        micro_batch_size = batch[list(batch.keys())[0]].shape[self.batch_axis]
+        micro_batch_size = batch.shape[self.batch_axis]
         data_idx = int(batch_idx * micro_batch_size)
         if not self.eval_example_only or data_idx in self.val_example_data_idx_list:
             pred_seq, loss, in_seq, target_seq, mask = self(batch)
@@ -599,7 +599,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         self._test_epoch_count = 0
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
-        micro_batch_size = batch[list(batch.keys())[0]].shape[self.batch_axis]
+        micro_batch_size = batch.shape[self.batch_axis]
         data_idx = int(batch_idx * micro_batch_size)
         if not self.eval_example_only or data_idx in self.test_example_data_idx_list:
             pred_seq, loss, in_seq, target_seq, mask = self(batch)
