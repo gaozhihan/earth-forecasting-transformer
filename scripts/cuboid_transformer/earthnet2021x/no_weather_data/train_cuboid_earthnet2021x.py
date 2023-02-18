@@ -532,13 +532,13 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
     def forward(self, batch):
         highresdynamic = batch
         seq = highresdynamic[..., :self.channels]
-        # mask from dataloader: 1 for mask and 0 for non-masked
+        # mask from updated EarthNet2021x: 0 for mask and 1 for non-masked.
         mask = highresdynamic[..., self.channels: self.channels + 1][self.out_slice]
 
         in_seq = seq[self.in_slice]
         target_seq = seq[self.out_slice]
         pred_seq = self.torch_nn_module(in_seq)
-        loss = F.mse_loss(pred_seq * (1 - mask), target_seq * (1 - mask))
+        loss = F.mse_loss(pred_seq * mask, target_seq * mask)
         return pred_seq, loss, in_seq, target_seq, mask
 
     def training_step(self, batch, batch_idx):
@@ -569,8 +569,8 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
                     mode="val", )
             if self.precision == 16:
                 pred_seq = pred_seq.float()
-            self.valid_mse(pred_seq * (1 - mask), target_seq * (1 - mask))
-            self.valid_mae(pred_seq * (1 - mask), target_seq * (1 - mask))
+            self.valid_mse(pred_seq * mask, target_seq * mask)
+            self.valid_mae(pred_seq * mask, target_seq * mask)
         return None
 
     def validation_epoch_end(self, outputs):
@@ -613,8 +613,8 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
                     prefix=f"{self.test_subset_name[self.test_epoch_count]}_")
             if self.precision == 16:
                 pred_seq = pred_seq.float()
-            self.test_mse(pred_seq * (1 - mask), target_seq * (1 - mask))
-            self.test_mae(pred_seq * (1 - mask), target_seq * (1 - mask))
+            self.test_mse(pred_seq * mask, target_seq * mask)
+            self.test_mae(pred_seq * mask, target_seq * mask)
         return None
 
     def test_epoch_end(self, outputs):
