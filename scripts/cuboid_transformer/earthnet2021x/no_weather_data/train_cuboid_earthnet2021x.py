@@ -22,7 +22,7 @@ from earthformer.utils.optim import SequentialLR, warmup_lambda
 from earthformer.utils.utils import get_parameter_names
 from earthformer.utils.checkpoint import pl_ckpt_to_pytorch_state_dict, s3_download_pretrained_ckpt
 from earthformer.utils.layout import layout_to_in_out_slice
-from earthformer.cuboid_transformer.cuboid_transformer_unet_dec import CuboidTransformerAuxModel
+from earthformer.cuboid_transformer.cuboid_transformer import CuboidTransformerModel
 from earthformer.datasets.earthnet.earthnet21x_dataloader import EarthNet2021xLightningDataModule, get_EarthNet2021x_dataloaders
 from earthformer.datasets.earthnet.visualization import vis_earthnet_seq
 
@@ -59,7 +59,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         else:
             dec_cross_attn_patterns = OmegaConf.to_container(model_cfg["cross_pattern"])
 
-        self.torch_nn_module = CuboidTransformerAuxModel(
+        self.torch_nn_module = CuboidTransformerModel(
             input_shape=model_cfg["input_shape"],
             target_shape=model_cfg["target_shape"],
             base_units=model_cfg["base_units"],
@@ -107,15 +107,13 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
             pos_embed_type=model_cfg["pos_embed_type"],
             use_relative_pos=model_cfg["use_relative_pos"],
             self_attn_use_final_proj=model_cfg["self_attn_use_final_proj"],
+            dec_use_first_self_attn=model_cfg["dec_use_first_self_attn"],
             # initialization
             attn_linear_init_mode=model_cfg["attn_linear_init_mode"],
             ffn_linear_init_mode=model_cfg["ffn_linear_init_mode"],
             conv_init_mode=model_cfg["conv_init_mode"],
             down_up_linear_init_mode=model_cfg["down_up_linear_init_mode"],
             norm_init_mode=model_cfg["norm_init_mode"],
-            # different from CuboidTransformerModel, no arg `dec_use_first_self_attn=False`
-            auxiliary_channels=model_cfg["auxiliary_channels"],
-            unet_dec_cross_mode=model_cfg["unet_dec_cross_mode"],
         )
 
         self.total_num_steps = total_num_steps
@@ -172,7 +170,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         self.scores_dir = os.path.join(self.save_dir, 'scores')
         os.makedirs(self.scores_dir, exist_ok=True)
         if cfg_file_path is not None:
-            cfg_file_target_path = os.path.join(self.save_dir, "cfg.yaml")
+            cfg_file_target_path = os.path.join(self.save_dir, "../cfg.yaml")
             if (not os.path.exists(cfg_file_target_path)) or \
                     (not os.path.samefile(cfg_file_path, cfg_file_target_path)):
                 copyfile(cfg_file_path, cfg_file_target_path)
@@ -251,6 +249,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         cfg.pos_embed_type = "t+hw"
         cfg.use_relative_pos = True
         cfg.self_attn_use_final_proj = True
+        cfg.dec_use_first_self_attn = False
 
         cfg.checkpoint_level = 2
         # initial downsample and final upsample
@@ -266,9 +265,6 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         cfg.conv_init_mode = "0"
         cfg.down_up_linear_init_mode = "0"
         cfg.norm_init_mode = "0"
-        # different from CuboidTransformerModel, no arg `dec_use_first_self_attn=False`
-        cfg.auxiliary_channels = 7  # 5 from mesodynamic, 1 from highresstatic, 1 from mesostatic
-        cfg.unet_dec_cross_mode = "up"
         return cfg
 
     @classmethod
@@ -534,46 +530,14 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         return self._out_slice
 
     def forward(self, batch):
-        highresdynamic = batch["highresdynamic"]
+        highresdynamic = batch
         seq = highresdynamic[..., :self.channels]
         # mask from dataloader: 1 for mask and 0 for non-masked
         mask = highresdynamic[..., self.channels: self.channels + 1][self.out_slice]
 
         in_seq = seq[self.in_slice]
         target_seq = seq[self.out_slice]
-
-        # process aux data
-        highresstatic = batch["highresstatic"]  # (b c h w)
-        mesodynamic = batch["mesodynamic"]  # (b t h w c)
-        mesostatic = batch["mesostatic"]    # (b c h w)
-
-        mesodynamic_interp = rearrange(mesodynamic,
-                                       "b t h w c -> b c t h w")
-        mesodynamic_interp = F.interpolate(mesodynamic_interp,
-                                           size=(self.oc.layout.in_len + self.oc.layout.out_len,
-                                                 self.oc.layout.img_height,
-                                                 self.oc.layout.img_width),
-                                           mode="nearest")
-        highresstatic_interp = rearrange(highresstatic,
-                                         "b c h w -> b c 1 h w")
-        highresstatic_interp = F.interpolate(highresstatic_interp,
-                                             size=(self.oc.layout.in_len + self.oc.layout.out_len,
-                                                   self.oc.layout.img_height,
-                                                   self.oc.layout.img_width),
-                                             mode="nearest")
-        mesostatic_interp = rearrange(mesostatic,
-                                      "b c h w -> b c 1 h w")
-        mesostatic_interp = F.interpolate(mesostatic_interp,
-                                          size=(self.oc.layout.in_len + self.oc.layout.out_len,
-                                                self.oc.layout.img_height,
-                                                self.oc.layout.img_width),
-                                          mode="nearest")
-        aux_data = torch.cat((highresstatic_interp, mesodynamic_interp, mesostatic_interp),
-                             dim=1)
-        aux_data = rearrange(aux_data,
-                             "b c t h w -> b t h w c")
-
-        pred_seq = self.torch_nn_module(in_seq, aux_data[self.in_slice], aux_data[self.out_slice])
+        pred_seq = self.torch_nn_module(in_seq)
         loss = F.mse_loss(pred_seq * (1 - mask), target_seq * (1 - mask))
         return pred_seq, loss, in_seq, target_seq, mask
 
