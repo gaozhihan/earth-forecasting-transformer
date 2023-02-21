@@ -23,7 +23,7 @@ from earthformer.utils.utils import get_parameter_names
 from earthformer.utils.checkpoint import pl_ckpt_to_pytorch_state_dict, s3_download_pretrained_ckpt
 from earthformer.utils.layout import layout_to_in_out_slice
 from earthformer.cuboid_transformer.cuboid_transformer import CuboidTransformerModel
-from earthformer.datasets.earthnet.earthnet21x_dataloader import EarthNet2021xLightningDataModule, get_EarthNet2021x_dataloaders
+from earthformer.datasets.earthnet.earthnet21x_npz_dataloader import EarthNet2021xLightningDataModule, get_EarthNet2021x_dataloaders
 from earthformer.datasets.earthnet.visualization import vis_earthnet_seq
 
 

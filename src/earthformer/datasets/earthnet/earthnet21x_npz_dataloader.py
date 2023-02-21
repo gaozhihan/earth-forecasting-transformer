@@ -1,3 +1,4 @@
+"""This implementation loads EarthNet2021x data as if it were `.npz` from EarthNet2021. See PR at https://github.com/amazon-science/earth-forecasting-transformer/pull/41"""
 from typing import Optional, Union, Sequence, Dict
 import os
 from pathlib import Path
