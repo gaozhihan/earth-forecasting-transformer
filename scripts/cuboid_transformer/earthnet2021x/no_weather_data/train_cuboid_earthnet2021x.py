@@ -532,8 +532,8 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
     def forward(self, batch):
         highresdynamic = batch
         seq = highresdynamic[..., :self.channels]
-        # mask from updated EarthNet2021x: 0 for mask and 1 for non-masked.
-        mask = highresdynamic[..., self.channels: self.channels + 1][self.out_slice]
+        # mask from updated EarthNet2021x: 1 for mask and 0 for non-masked.
+        mask = 1 - highresdynamic[..., self.channels: self.channels + 1][self.out_slice]
 
         in_seq = seq[self.in_slice]
         target_seq = seq[self.out_slice]
