@@ -1,8 +1,5 @@
 """
-Code is adapted from
-https://github.com/earthnet2021/earthnet-models-pytorch/blob/b87d71f4b082f68fe7b0ead303b87b75391d369b/earthnet_models_pytorch/setting/nnse_metric.py
-and
-
+Code is adapted from https://github.com/earthnet2021/earthnet-models-pytorch/blob/b87d71f4b082f68fe7b0ead303b87b75391d369b/earthnet_models_pytorch/setting/nnse_metric.py
 """
 import numpy as np
 from scipy.stats import hmean
