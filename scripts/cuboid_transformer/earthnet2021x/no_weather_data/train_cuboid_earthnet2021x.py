@@ -23,7 +23,7 @@ from earthformer.utils.utils import get_parameter_names
 from earthformer.utils.checkpoint import pl_ckpt_to_pytorch_state_dict, s3_download_pretrained_ckpt
 from earthformer.utils.layout import layout_to_in_out_slice
 from earthformer.cuboid_transformer.cuboid_transformer import CuboidTransformerModel
-from earthformer.datasets.earthnet.earthnet21x_npz_dataloader import EarthNet2021xLightningDataModule, get_EarthNet2021x_dataloaders
+from earthformer.datasets.earthnet.earthnet21x_dataloader import EarthNet2021xLightningDataModule, get_EarthNet2021x_dataloaders
 from earthformer.datasets.earthnet.visualization import vis_earthnet_seq
 
 
@@ -58,9 +58,14 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
             dec_cross_attn_patterns = [model_cfg["cross_pattern"]] * num_blocks
         else:
             dec_cross_attn_patterns = OmegaConf.to_container(model_cfg["cross_pattern"])
+        if self.oc.dataset.model_in_cat_mask:
+            input_shape = list(model_cfg["input_shape"])
+            input_shape[0] += 1  # concat to channel axis
+        else:
+            input_shape = model_cfg["input_shape"]
 
         self.torch_nn_module = CuboidTransformerModel(
-            input_shape=model_cfg["input_shape"],
+            input_shape=input_shape,
             target_shape=model_cfg["target_shape"],
             base_units=model_cfg["base_units"],
             block_units=model_cfg["block_units"],
@@ -270,21 +275,16 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
     @classmethod
     def get_dataset_config(cls):
         cfg = OmegaConf.create()
-        cfg.return_mode = "default"
-        cfg.data_aug_mode = None
-        cfg.data_aug_cfg = None
         cfg.test_subset_name = ("iid", "ood")
         layout_cfg = cls.get_layout_config()
+        cfg.layout = "NTCHW"
         cfg.in_len = layout_cfg.in_len
         cfg.out_len = layout_cfg.out_len
-        cfg.layout = "THWC"
-        cfg.static_layout = "CHW"
         cfg.val_ratio = 0.1
         cfg.train_val_split_seed = None
-        cfg.highresstatic_expand_t = False
-        cfg.mesostatic_expand_t = False
-        cfg.meso_crop = None
-        cfg.fp16 = False        
+        cfg.fp16 = False
+        cfg.dl_cloudmask = False
+        cfg.model_in_cat_mask = False
         return cfg
 
     @staticmethod
@@ -471,17 +471,11 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
             micro_batch_size: int = 1,
             num_workers: int = 8):
         dm = EarthNet2021xLightningDataModule(
-            return_mode=dataset_cfg["return_mode"],
-            data_aug_mode=dataset_cfg["data_aug_mode"],
-            data_aug_cfg=dataset_cfg["data_aug_cfg"],
+            test_subset_name=dataset_cfg["test_subset_name"],
             val_ratio=dataset_cfg["val_ratio"],
             train_val_split_seed=dataset_cfg["train_val_split_seed"],
-            layout=dataset_cfg["layout"],
-            static_layout=dataset_cfg["static_layout"],
-            highresstatic_expand_t=dataset_cfg["highresstatic_expand_t"],
-            mesostatic_expand_t=dataset_cfg["mesostatic_expand_t"],
-            meso_crop=dataset_cfg["meso_crop"],
             fp16=dataset_cfg["fp16"],
+            dl_cloudmask=dataset_cfg["dl_cloudmask"],
             # datamodule_only
             batch_size=micro_batch_size,
             num_workers=num_workers, )
@@ -493,18 +487,11 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
             micro_batch_size: int = 1,
             num_workers: int = 8):
         dataloader_dict = get_EarthNet2021x_dataloaders(
-            dataloader_return_mode=dataset_cfg["return_mode"],
-            data_aug_mode=dataset_cfg["data_aug_mode"],
-            data_aug_cfg=dataset_cfg["data_aug_cfg"],
             test_subset_name=dataset_cfg["test_subset_name"],
             val_ratio=dataset_cfg["val_ratio"],
             train_val_split_seed=dataset_cfg["train_val_split_seed"],
-            layout=dataset_cfg["layout"],
-            static_layout=dataset_cfg["static_layout"],
-            highresstatic_expand_t=dataset_cfg["highresstatic_expand_t"],
-            mesostatic_expand_t=dataset_cfg["mesostatic_expand_t"],
-            meso_crop=dataset_cfg["meso_crop"],
             fp16=dataset_cfg["fp16"],
+            dl_cloudmask=dataset_cfg["dl_cloudmask"],
             batch_size=micro_batch_size,
             num_workers=num_workers, )
         return dataloader_dict
@@ -530,15 +517,24 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         return self._out_slice
 
     def forward(self, batch):
-        highresdynamic = batch
+        highresdynamic = rearrange(batch["dynamic"][0],
+                                   f"{' '.join(self.oc.dataset.layout)} -> {' '.join(self.layout)}")
         seq = highresdynamic[..., :self.channels]
-        # mask from updated EarthNet2021x: 1 for mask and 0 for non-masked.
-        mask = 1 - highresdynamic[..., self.channels: self.channels + 1][self.out_slice]
+        # mask from updated EarthNet2021x: 0 for mask and 1 for non-masked.
+        mask = rearrange(batch["dynamic_mask"][0],
+                         f"{' '.join(self.oc.dataset.layout)} -> {' '.join(self.layout)}")
+        in_mask = mask[self.in_slice]
+        out_mask = mask[self.out_slice]
 
         in_seq = seq[self.in_slice]
         target_seq = seq[self.out_slice]
-        pred_seq = self.torch_nn_module(in_seq)
-        loss = F.mse_loss(pred_seq * mask, target_seq * mask)
+        if self.oc.dataset.model_in_cat_mask:
+            model_in = torch.cat([in_seq, in_mask], dim=self.channel_axis)
+        else:
+            model_in = in_seq
+
+        pred_seq = self.torch_nn_module(model_in)
+        loss = F.mse_loss(pred_seq * out_mask, target_seq * out_mask)
         return pred_seq, loss, in_seq, target_seq, mask
 
     def training_step(self, batch, batch_idx):
