@@ -58,9 +58,9 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
             dec_cross_attn_patterns = [model_cfg["cross_pattern"]] * num_blocks
         else:
             dec_cross_attn_patterns = OmegaConf.to_container(model_cfg["cross_pattern"])
-        if self.oc.dataset.model_in_cat_mask:
+        if oc.dataset.model_in_cat_mask:
             input_shape = list(model_cfg["input_shape"])
-            input_shape[0] += 1  # concat to channel axis
+            input_shape[-1] += 1  # concat to channel axis
         else:
             input_shape = model_cfg["input_shape"]
 
@@ -535,7 +535,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
 
         pred_seq = self.torch_nn_module(model_in)
         loss = F.mse_loss(pred_seq * out_mask, target_seq * out_mask)
-        return pred_seq, loss, in_seq, target_seq, mask
+        return pred_seq, loss, in_seq, target_seq, out_mask
 
     def training_step(self, batch, batch_idx):
         pred_seq, loss, in_seq, target_seq, mask = self(batch)
@@ -552,7 +552,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
-        micro_batch_size = batch.shape[self.batch_axis]
+        micro_batch_size = batch["dynamic_mask"][0].shape[0]
         data_idx = int(batch_idx * micro_batch_size)
         if not self.eval_example_only or data_idx in self.val_example_data_idx_list:
             pred_seq, loss, in_seq, target_seq, mask = self(batch)
@@ -595,7 +595,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         self._test_epoch_count = 0
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
-        micro_batch_size = batch.shape[self.batch_axis]
+        micro_batch_size = batch["dynamic_mask"][0].shape[0]
         data_idx = int(batch_idx * micro_batch_size)
         if not self.eval_example_only or data_idx in self.test_example_data_idx_list:
             pred_seq, loss, in_seq, target_seq, mask = self(batch)
