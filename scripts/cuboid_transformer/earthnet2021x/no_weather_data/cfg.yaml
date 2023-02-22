@@ -1,20 +1,13 @@
-# Configurations for pretrained checkpoint. Please do not modify it.
 dataset:
-  return_mode: "minimal"
-  data_aug_mode: null
-  data_aug_cfg:
-      mixup_alpha: 0.2
   test_subset_name: ["iid", "ood"]
   in_len: 10
   out_len: 20
-  layout: "THWC"
-  static_layout: "CHW"
+  layout: "NTCHW"
   val_ratio: 0.1
   train_val_split_seed: null
-  highresstatic_expand_t: false 
-  mesostatic_expand_t: false 
-  meso_crop: null
-  fp16: false 
+  fp16: false
+  dl_cloudmask: false
+  model_in_cat_mask: true
 layout:
   in_len: 10
   out_len: 20
