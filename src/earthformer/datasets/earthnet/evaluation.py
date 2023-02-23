@@ -46,13 +46,18 @@ class NNSEVeg(Metric):
             return out_cache
 
     def update(self, preds, batch, just_return=False):
-        '''Any code needed to update the state given any inputs to the metric.
-
-            args:
-            preds (torch.Tensor): Prediction tensor of correct length with NDVI at channel index self.ndvi_pred_idx
-            batch: (dict): dictionary from dataloader. Expects NDVI target tensor to be under key "dynamic", first entry, channel index self.ndvi_targ_idx.
-        '''
-
+        r"""
+        Parameters
+        ----------
+        preds:  torch.Tensor
+            Shape = (N, H, W, C, T)
+            Prediction tensor of correct length with NDVI at channel index self.ndvi_pred_idx.
+        data:   Dict
+            dict from earthnet21x_dataloader
+            Expects NDVI target tensor to be under key "dynamic", first entry, channel index self.ndvi_targ_idx.
+        just_return:    bool
+            if True, not count into the final `compute()` calculation.
+        """
         t_pred = preds.shape[1]
 
         lc = batch["landcover"]
@@ -79,6 +84,98 @@ class NNSEVeg(Metric):
             cubenames = batch["cubename"]
             veg_score = 2 - 1 / (nnse.sum((1, 2, 3)) / n_obs)  # b
             return [{"name": cubenames[i], "veg_score": veg_score[i]} for i in range(len(cubenames))]
+        else:
+            self.nnse_sum += nnse.sum()
+            self.n_obs += n_obs.sum()
+
+    def compute(self):
+        """
+        Computes a final value from the state of the metric.
+        Computes mean squared error over state.
+        """
+        return {"veg_score": 2 - 1 / (self.nnse_sum / self.n_obs)}
+
+
+class NNSEVeg_npz(Metric):
+    r"""
+    The same as NNSEVeg except that it suits the old API of `earthnet21x_npz_dataloader.py`
+    """
+    def __init__(self, compute_on_step: bool = False, dist_sync_on_step: bool = False, process_group=None,
+                 dist_sync_fn=None, lc_min=10., lc_max=40., ndvi_pred_idx=0, ndvi_targ_idx=0):
+        super().__init__(
+            compute_on_step=compute_on_step,
+            dist_sync_on_step=dist_sync_on_step,
+            process_group=process_group,
+            dist_sync_fn=dist_sync_fn,
+        )
+
+        self.add_state("nnse_sum", default=torch.tensor(0.0), dist_reduce_fx="sum")
+        self.add_state("n_obs", default=torch.tensor(1e-6), dist_reduce_fx="sum")
+
+        self.lc_min = lc_min
+        self.lc_max = lc_max
+        self.ndvi_pred_idx = ndvi_pred_idx
+        self.ndvi_targ_idx = ndvi_targ_idx
+
+    @torch.jit.unused
+    def forward(self, *args, **kwargs):
+        """
+        Automatically calls ``update()``. Returns the metric value over inputs if ``compute_on_step`` is True.
+        """
+        # add current step
+        with torch.no_grad():
+            self.update(*args, **kwargs)  # accumulate the metrics
+        self._forward_cache = None
+
+        if self.compute_on_step:
+            kwargs["just_return"] = True
+            out_cache = self.update(*args, **kwargs)  # compute and return the rmse
+            kwargs.pop("just_return", None)
+            return out_cache
+
+    def update(self, preds, data, just_return=False):
+        r"""
+        Parameters
+        ----------
+        preds:  torch.Tensor
+            Shape = (N, H, W, C, T)
+            Prediction tensor of correct length with NDVI at channel index self.ndvi_pred_idx.
+        data:   Dict[str, torch.Tensor]
+            Each element should be have the layout NHWCT
+        just_return:    bool
+            if True, not count into the final `compute()` calculation.
+        """
+        t_pred = preds.shape[-1]
+
+        nir_targ = data["highresdynamic"][:, :, :, 3, :]  # B H W C T
+        red_targ = data["highresdynamic"][:, :, :, 2, :]  # B H W C T
+
+        ndvi_targ = ((nir_targ - red_targ) / (nir_targ + red_targ + 1e-8)).permute(0, 3, 1, 2).unsqueeze(2)  # b t c h w
+
+        lc = data["highresstatic"][:, :, :, 3]  # B H W
+
+        s2_mask = (data["highresdynamic"][:, :, :, 4, -t_pred:] == 0.0).bool().type_as(preds).permute(0, 3, 1,
+                                                                                                      2).unsqueeze(
+            2)  # b t c h w
+
+        lc_mask = ((lc >= self.lc_min).bool() & (lc <= self.lc_max).bool()).type_as(preds).unsqueeze(1)  # b c h w
+
+        ndvi_pred = preds[:, :, :, self.ndvi_pred_idx, ...].permute(0, 3, 1, 2).unsqueeze(2)  # b t c h w
+
+        sum_squared_error = (((ndvi_targ - ndvi_pred) * s2_mask) ** 2).sum(1)  # b c h w
+        mean_ndvi_targ = (ndvi_targ * s2_mask).sum(1).unsqueeze(1) / (s2_mask.sum(1).unsqueeze(1) + 1e-8)  # b t c h w
+
+        sum_squared_deviation = (((ndvi_targ - mean_ndvi_targ) * s2_mask) ** 2).sum(1)  # b c h w
+
+        nse = (1 - sum_squared_error / (sum_squared_deviation + 1e-8))  # b c h w
+
+        nnse = (1 / (2 - nse)) * lc_mask  # b c h w
+
+        n_obs = lc_mask.sum((1, 2, 3))  # b
+
+        if just_return:
+            veg_score = 2 - 1 / (nnse.sum((1, 2, 3)) / n_obs)  # b
+            return veg_score.mean()
         else:
             self.nnse_sum += nnse.sum()
             self.n_obs += n_obs.sum()
