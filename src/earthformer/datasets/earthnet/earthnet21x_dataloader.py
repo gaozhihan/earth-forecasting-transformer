@@ -27,11 +27,20 @@ class EarthNet2021XDataset(Dataset):
     def __init__(self, folder: Union[Path, str], fp16=False, s2_bands=["ndvi", "B02", "B03", "B04", "B8A"],
                  eobs_vars=['fg', 'hu', 'pp', 'qq', 'rr', 'tg', 'tn', 'tx'], eobs_agg=['mean', 'min', 'max'],
                  static_vars=['nasa_dem', 'alos_dem', 'cop_dem', 'esawc_lc', 'geom_cls'], start_month_extreme=None,
-                 dl_cloudmask=False):
+                 dl_cloudmask=False, allow_fastaccess=False):  # , fg_masked = False):
         if not isinstance(folder, Path):
             folder = Path(folder)
 
-        self.filepaths = sorted(list(folder.glob("**/*.nc")))
+        if allow_fastaccess and (
+                folder.stem in ["train", "test_chopped", "iid_chopped", "ood-t_chopped", "ood-st_chopped",
+                                "ood-s_chopped", "iid"]) and (folder.parent / f"{folder.stem}_fastaccess").exists():
+            folder = folder.parent / f"{folder.stem}_fastaccess"
+            print("Fast Access Dataloading enabled")
+            self.fast_access = True
+            self.filepaths = sorted(list(folder.glob("**/*.npz")))
+        else:
+            self.fast_access = False
+            self.filepaths = sorted(list(folder.glob("**/*.nc")))
 
         self.type = np.float16 if fp16 else np.float32
 
@@ -41,6 +50,7 @@ class EarthNet2021XDataset(Dataset):
         self.static_vars = static_vars
         self.start_month_extreme = start_month_extreme
         self.dl_cloudmask = dl_cloudmask
+        # self.fg_masked = fg_masked
 
         self.eobs_mean = xr.DataArray(
             data=[8.90661030749754, 2.732927619847993, 77.54440854529798, 1014.330962704611, 126.47924227500346,
@@ -60,50 +70,32 @@ class EarthNet2021XDataset(Dataset):
 
         filepath = self.filepaths[idx]
 
+        if self.fast_access:
+            npz = np.load(filepath)
+            data = {
+                "dynamic": [
+                    torch.from_numpy(npz["sen2arr"].astype(self.type)),
+                    torch.from_numpy(npz["eobsarr"].astype(self.type))
+                ],
+                "dynamic_mask": [
+                    torch.from_numpy(npz["sen2mask"].astype(self.type))
+                ],
+                "static": [
+                    torch.from_numpy(npz["staticarr"].astype(self.type))
+                ],
+                "static_mask": [],
+                "landcover": torch.from_numpy(npz["lc"].astype(self.type)),
+                "filepath": str(Path(
+                    f"/Net/Groups/BGI/work_1/scratch/EarthNet2021/data/datasets/en21x/{filepath.parent.parent.stem[:-11]}/") / filepath.parent.stem / f"{filepath.stem}.nc"),
+                "cubename": filepath.stem
+            }
+            return data
+
         minicube = xr.open_dataset(filepath)
 
         if self.start_month_extreme:
             start_idx = {"march": 10, "april": 15, "may": 20, "june": 25, "july": 30}[self.start_month_extreme]
             minicube = minicube.isel(time=slice(5 * start_idx, 5 * (start_idx + 30)))
-
-        # if minicube.s2_B02.shape[1] != 128:
-        #     # print("lat", filepath, minicube.s2_B02.shape, minicube["s2_B02"].dropna(dim = "lat", how = "all").shape)
-        #     new_lat = xr.DataArray(coords = {"lat": np.linspace(minicube.lat.values[0], minicube.lat.values[-1] if len(minicube.lat) > 2 else minicube.lat.values[0] - 0.023551999999654072, 128)}, dims = ("lat", ))
-        #     new_mc = [minicube[[k for k in minicube.data_vars if k not in ["s2_B02", "s2_B03", "s2_B04", "s2_B8A", "alos_dem", "cop_dem", "srtm_dem", "esawc_lc", "geom_cls", "s2_SCL", "s2_mask"]]]]
-
-        #     for var in ["s2_B02", "s2_B03", "s2_B04", "s2_B8A", "alos_dem", "cop_dem", "srtm_dem", "esawc_lc", "geom_cls", "s2_SCL", "s2_mask"]:
-        #         if var in minicube:
-        #             curr_mc = minicube[var].dropna(dim = "lat", how = "all")
-        #             if len(curr_mc.lat) != 128:
-        #                 curr_mc = curr_mc.interp_like(new_lat)
-        #             else:
-        #                 curr_mc["lat"] = new_lat
-        #             #curr_mc["lat"] = minicube["s2_B02"].dropna(dim = "lat", how = "all").lat
-        #             new_mc.append(curr_mc)
-        #     for i in range(len(new_mc[1:])):
-        #         if "lat" in new_mc[i+1].dims:
-        #             new_mc[i+1]["lat"] = new_lat
-
-        #     minicube = xr.merge(new_mc)
-
-        # if minicube.s2_B02.shape[2] != 128:
-        #     # print("lon", filepath, minicube.s2_B02.shape, minicube["s2_B02"].dropna(dim = "lon", how = "all").shape)
-        #     new_lon = xr.DataArray(coords = {"lon": np.linspace(minicube.lon.values[0], minicube.lon.values[-1] if len(minicube.lon) > 2 else minicube.lon.values[0] + 0.037961000000000134, 128)}, dims = ("lon", ))
-        #     new_mc = [minicube[[k for k in minicube.data_vars if k not in ["s2_B02", "s2_B03", "s2_B04", "s2_B8A", "alos_dem", "cop_dem", "nasa_dem", "esawc_lc", "geom_cls", "s2_SCL", "s2_mask"]]]]
-
-        #     for var in ["s2_B02", "s2_B03", "s2_B04", "s2_B8A", "alos_dem", "cop_dem", "nasa_dem", "esawc_lc", "geom_cls", "s2_SCL", "s2_mask"]:
-        #         if var in minicube:
-        #             curr_mc = minicube[var].dropna(dim = "lon", how = "all")
-        #             if len(curr_mc.lon) != 128:
-        #                 curr_mc = curr_mc.interp_like(new_lon)
-        #             else:
-        #                 curr_mc["lon"] = new_lon
-        #             #curr_mc["lon"] = minicube["s2_B02"].dropna(dim = "lon", how = "all").lon
-        #             new_mc.append(curr_mc)
-        #     for i in range(len(new_mc[1:])):
-        #         if "lon" in new_mc[i+1].dims:
-        #             new_mc[i+1]["lon"] = new_lon
-        #     minicube = xr.merge(new_mc)
 
         nir = minicube.s2_B8A
         red = minicube.s2_B04
@@ -127,6 +119,10 @@ class EarthNet2021XDataset(Dataset):
                                                                                                      "lat",
                                                                                                      "lon").values
             sen2mask[np.isnan(sen2mask)] = 4.
+
+        # if self.fg_masked:
+        #     fg = xr.open_zarr("/Net/Groups/BGI/work_2/Landscapes_dynamics/downloads/Eobs/v26/eobs_2016_2022_fg.zarr")
+        #     minicube["eobs_fg"] = fg.sel(latitude = minicube.latitude_eobs.item(), method = "nearest").sel(longitude = minicube.longitude_eobs.item(), method = "nearest").fg.drop_vars(["latitude", "longitude"])
 
         eobs = ((minicube[[f'eobs_{v}' for v in self.eobs_vars]].to_array(
             "variable") - self.eobs_mean) / self.eobs_std).transpose("time", "variable")
