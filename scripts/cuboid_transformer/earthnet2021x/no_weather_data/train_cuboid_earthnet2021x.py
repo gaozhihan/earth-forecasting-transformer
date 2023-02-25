@@ -164,8 +164,10 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
 
         self.valid_mse = torchmetrics.MeanSquaredError()
         self.valid_mae = torchmetrics.MeanAbsoluteError()
+        self.valid_ndvi_mse = torchmetrics.MeanSquaredError()
         self.test_mse = torchmetrics.MeanSquaredError()
         self.test_mae = torchmetrics.MeanAbsoluteError()
+        self.test_ndvi_mse = torchmetrics.MeanSquaredError()
 
         self.configure_save(cfg_file_path=oc_file)
 
@@ -568,18 +570,21 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
                 pred_seq = pred_seq.float()
             self.valid_mse(pred_seq * mask, target_seq * mask)
             self.valid_mae(pred_seq * mask, target_seq * mask)
-        return None
+            self.valid_ndvi_mse(pred_seq[..., :1] * mask, target_seq[..., :1] * mask)
 
     def validation_epoch_end(self, outputs):
         valid_mse = self.valid_mse.compute()
         valid_mae = self.valid_mae.compute()
+        valid_ndvi_mse = self.valid_ndvi_mse.compute()
         valid_loss = valid_mse
 
         self.log('valid_loss_epoch', valid_loss, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
         self.log('valid_mse_epoch', valid_mse, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
         self.log('valid_mae_epoch', valid_mae, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
+        self.log('valid_ndvi_mse_epoch', valid_ndvi_mse, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
         self.valid_mse.reset()
         self.valid_mae.reset()
+        self.valid_ndvi_mse.reset()
 
     @property
     def test_epoch_count(self):
@@ -612,15 +617,17 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
                 pred_seq = pred_seq.float()
             self.test_mse(pred_seq * mask, target_seq * mask)
             self.test_mae(pred_seq * mask, target_seq * mask)
-        return None
+            self.test_ndvi_mse(pred_seq[..., :1] * mask, target_seq[..., :1] * mask)
 
     def test_epoch_end(self, outputs):
         test_mse = self.test_mse.compute()
         test_mae = self.test_mae.compute()
+        test_ndvi_mse = self.test_ndvi_mse.compute()
 
         prefix = self.test_subset_name[self.test_epoch_count]
         self.log(f'{prefix}_test_mse_epoch', test_mse, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
         self.log(f'{prefix}_test_mae_epoch', test_mae, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
+        self.log(f'{prefix}_test_ndvi_mse_epoch', test_ndvi_mse, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
         self.test_mse.reset()
         self.test_mae.reset()
 
