@@ -519,6 +519,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
     def forward(self, batch):
         highresdynamic = rearrange(batch["dynamic"][0],
                                    f"{' '.join(self.oc.dataset.layout)} -> {' '.join(self.layout)}")
+        # channels are (NDVI, blue, green, red, infrared), see `s2_bands` in https://github.com/earthnet2021/earthnet-models-pytorch/blob/2eabbdcbed76afdc39ac7eba2bc38a95ad1f371b/earthnet_models_pytorch/setting/en21x_data.py#L25
         seq = highresdynamic[..., :self.channels]
         # mask from updated EarthNet2021x: 0 for mask and 1 for non-masked.
         mask = rearrange(batch["dynamic_mask"][0],
@@ -638,7 +639,8 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         ----------
         data_idx
         context_seq, target_seq, pred_seq:   np.ndarray
-            layout should not include batch
+            layout = "NTHWC"
+            the channels are (NDVI, blue, green, red, infrared)
         mode:   str
         """
         if self.local_rank == 0:
@@ -654,11 +656,11 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
                 for variable in ["rgb", "ndvi"]:
                     save_name = f"{prefix}{mode}_epoch_{self.current_epoch}_{variable}_data_{data_idx}.png"
                     vis_earthnet_seq(
-                        context_np=context_seq,
-                        target_np=target_seq,
-                        pred_np=pred_seq,
+                        context_np=context_seq[..., 1:],
+                        target_np=target_seq[..., 1:],
+                        pred_np=pred_seq[..., 1:],
                         ncols=self.oc.vis.ncols,
-                        layout=self.layout,
+                        layout=self.layout,  # NTHWC
                         variable=variable,
                         vegetation_mask=None,
                         cloud_mask=True,
