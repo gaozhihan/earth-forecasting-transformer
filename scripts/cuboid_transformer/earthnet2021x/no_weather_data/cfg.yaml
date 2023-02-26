@@ -20,10 +20,10 @@ optim:
   micro_batch_size: 2
   seed: 0
   method: "adamw"
-  lr: 0.0005
+  lr: 0.001
   wd: 1.0e-05
   gradient_clip_val: 1.0
-  max_epochs: 200
+  max_epochs: 100
   # scheduler
   lr_scheduler_mode: "cosine"
   min_lr_ratio: 1.0e-3
