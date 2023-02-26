@@ -530,6 +530,8 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
                          f"{' '.join(self.oc.dataset.layout)} -> {' '.join(self.layout)}")
         if not self.oc.dataset.use_mask:
             mask = torch.ones_like(mask)
+        else:
+            mask.bool().float()  # original val is 4.0
         in_mask = mask[self.in_slice]
         out_mask = mask[self.out_slice]
 
