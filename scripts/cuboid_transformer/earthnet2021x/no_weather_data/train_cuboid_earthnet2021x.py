@@ -286,6 +286,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         cfg.train_val_split_seed = None
         cfg.fp16 = False
         cfg.dl_cloudmask = False
+        cfg.use_mask = True
         cfg.model_in_cat_mask = False
         return cfg
 
@@ -523,9 +524,12 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
                                    f"{' '.join(self.oc.dataset.layout)} -> {' '.join(self.layout)}")
         # channels are (NDVI, blue, green, red, infrared), see `s2_bands` in https://github.com/earthnet2021/earthnet-models-pytorch/blob/2eabbdcbed76afdc39ac7eba2bc38a95ad1f371b/earthnet_models_pytorch/setting/en21x_data.py#L25
         seq = highresdynamic[..., :self.channels]
-        # mask from updated EarthNet2021x: 0 for mask and 1 for non-masked.
-        mask = rearrange(batch["dynamic_mask"][0],
-                         f"{' '.join(self.oc.dataset.layout)} -> {' '.join(self.layout)}")
+        if self.oc.dataset.use_mask:
+            # mask from updated EarthNet2021x: 0 for mask and 1 for non-masked.
+            mask = rearrange(batch["dynamic_mask"][0],
+                             f"{' '.join(self.oc.dataset.layout)} -> {' '.join(self.layout)}")
+        else:
+            mask = torch.ones_like(batch["dynamic_mask"][0])
         in_mask = mask[self.in_slice]
         out_mask = mask[self.out_slice]
 

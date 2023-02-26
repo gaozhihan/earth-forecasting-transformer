@@ -7,6 +7,7 @@ dataset:
   train_val_split_seed: null
   fp16: false
   dl_cloudmask: false
+  use_mask: true
   model_in_cat_mask: true
 layout:
   in_len: 10
