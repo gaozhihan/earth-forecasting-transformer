@@ -528,7 +528,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         # mask from updated EarthNet2021x: 0 for mask and 1 for non-masked.
         mask = rearrange(batch["dynamic_mask"][0],
                          f"{' '.join(self.oc.dataset.layout)} -> {' '.join(self.layout)}")
-        if self.oc.dataset.use_mask:
+        if not self.oc.dataset.use_mask:
             mask = torch.ones_like(mask)
         in_mask = mask[self.in_slice]
         out_mask = mask[self.out_slice]
@@ -541,6 +541,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
             model_in = in_seq
 
         pred_seq = self.torch_nn_module(model_in)
+        # TODO: the mask leads to blank prediction
         loss = F.mse_loss(pred_seq * out_mask, target_seq * out_mask)
         return pred_seq, loss, in_seq, target_seq, out_mask
 
