@@ -177,7 +177,7 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
         self.scores_dir = os.path.join(self.save_dir, 'scores')
         os.makedirs(self.scores_dir, exist_ok=True)
         if cfg_file_path is not None:
-            cfg_file_target_path = os.path.join(self.save_dir, "../cfg.yaml")
+            cfg_file_target_path = os.path.join(self.save_dir, "cfg.yaml")
             if (not os.path.exists(cfg_file_target_path)) or \
                     (not os.path.samefile(cfg_file_path, cfg_file_target_path)):
                 copyfile(cfg_file_path, cfg_file_target_path)
