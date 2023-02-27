@@ -2,7 +2,7 @@
 
 ## Train Earthformer on EarthNet2021x
 Run the following command to train Earthformer on EarthNet2021x dataset. 
-Change the configurations in [cfg.yaml](./cfg.yaml)
+Change the configurations in [cfg.yaml](cfg.yaml)
 ```bash
 MASTER_ADDR=localhost MASTER_PORT=10001 python train_cuboid_earthnet2021x.py --gpus 2 --cfg cfg.yaml --ckpt_name last.ckpt --save tmp_earthnet2021x
 ```
