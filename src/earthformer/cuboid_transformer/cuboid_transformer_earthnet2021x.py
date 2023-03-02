@@ -1147,8 +1147,6 @@ class CuboidTransformerModelEarthNet2021x(nn.Module):
         x = self.initial_encoder(x)
         # latent conditioning before
         x = rearrange(x, "b t h w c -> b (t c) h w")
-        if cond is not None:
-            cond = rearrange(cond, "b t h w c -> b (t c) h w")
         x = self.latent_conditioning_before(x, cond)
         x = rearrange(x, "b (t c) h w -> b t h w c", t=T_in)
         # latent conditioning before end
