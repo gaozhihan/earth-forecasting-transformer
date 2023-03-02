@@ -812,7 +812,7 @@ class CuboidTransformerModelEarthNet2021x(nn.Module):
             else:
                 raise NotImplementedError
         else:
-            raise NotImplementedError
+            self.early_conditioning = Identity_Conditioning()
 
         if self.num_global_vectors > 0:
             self.init_global_vectors = nn.Parameter(
@@ -857,7 +857,7 @@ class CuboidTransformerModelEarthNet2021x(nn.Module):
             else:
                 raise NotImplementedError
         else:
-            raise NotImplementedError
+            self.early_conditioning = Identity_Conditioning()
 
         self.encoder = CuboidTransformerEncoderEarthNet2021x(
             input_shape=(T_in, H_in, W_in, base_units),
@@ -975,7 +975,7 @@ class CuboidTransformerModelEarthNet2021x(nn.Module):
             else:
                 raise NotImplementedError
         else:
-            raise NotImplementedError
+            self.early_conditioning = Identity_Conditioning()
 
         self.reset_parameters()
 

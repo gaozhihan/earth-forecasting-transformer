@@ -27,15 +27,15 @@ def config_cuboid_transformer(cfg):
     model = CuboidTransformerModelEarthNet2021x(**model_cfg)
     return model
 
-pretrained_cfg_path = os.path.join(cfg.root_dir, "scripts", "cuboid_transformer", "earthnet_w_meso", "earthformer_earthnet_v1.yaml")
+pretrained_cfg_path = os.path.join(cfg.root_dir, "scripts", "cuboid_transformer", "earthnet2021x", "cond_weather_data", "cfg.yaml")
 pretrained_cfg = OmegaConf.load(open(pretrained_cfg_path, "r"))
-cfg.model.weather_conditioning_loc="early"
-cfg.model.weather_conditioning="cat"
-cfg.model.weather_conditioning_channels=24
-model = config_cuboid_transformer(cfg=cfg)
+pretrained_cfg.model.weather_conditioning_loc="early"
+pretrained_cfg.model.weather_conditioning="cat"
+pretrained_cfg.model.weather_conditioning_channels=24
+model = config_cuboid_transformer(cfg=pretrained_cfg)
 batch_size = 2
-context = torch.rand((batch_size, 10, 128, 128, 4))
-target = torch.rand((batch_size, 20, 128, 128, 4))
+context = torch.rand((batch_size, 10, 128, 128, 5))
+target = torch.rand((batch_size, 20, 128, 128, 5))
 cond = torch.rand((batch_size, 30, cfg.model.weather_conditioning_channels))
 pred = model(context, cond, verbose=True)
 torch.mean(pred).backward()
