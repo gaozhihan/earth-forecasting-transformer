@@ -30,7 +30,7 @@ from earthformer.datasets.earthnet.visualization import vis_earthnet_seq
 _curr_dir = os.path.realpath(os.path.dirname(os.path.realpath(__file__)))
 exps_dir = os.path.join(_curr_dir, "experiments")
 pretrained_checkpoints_dir = cfg.pretrained_checkpoints_dir
-pytorch_state_dict_name = "earthformer_earthnet2021x.pt"
+pytorch_state_dict_name = "earthformer_earthnet2021x_no_cond.pt"
 
 class CuboidEarthNet2021xPLModule(pl.LightningModule):
 
@@ -701,7 +701,7 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
     if args.pretrained:
-        args.cfg = os.path.abspath(os.path.join(os.path.dirname(__file__), "earthformer_earthnet2021x_v1.yaml"))
+        args.cfg = os.path.abspath(os.path.join(os.path.dirname(__file__), "earthformer_earthnet2021x_no_cond_v1.yaml"))
     if args.cfg is not None:
         oc_from_file = OmegaConf.load(open(args.cfg, "r"))
         dataset_cfg = OmegaConf.to_object(oc_from_file.dataset)
