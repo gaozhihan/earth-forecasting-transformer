@@ -1134,14 +1134,14 @@ class CuboidTransformerModelEarthNet2021x(nn.Module):
         out
             The output Shape (B, T_out, H, W, C_out)
         """
-        B, _, _, _, _ = x.shape
+        B, T_in, _, _, _ = x.shape
         T_out = self.target_shape[0]
         # early conditioning
         x = rearrange(x, "b t h w c -> b (t c) h w")
         if cond is not None:
             cond = rearrange(cond, "b t h w c -> b (t c) h w")
         x = self.early_conditioning(x, cond)
-        x = rearrange(x, "b (t c) h w -> b t h w c", b=B)
+        x = rearrange(x, "b (t c) h w -> b t h w c", t=T_in)
         # early conditioning end
         x = self.initial_encoder(x)
         # latent conditioning before
@@ -1149,7 +1149,7 @@ class CuboidTransformerModelEarthNet2021x(nn.Module):
         if cond is not None:
             cond = rearrange(cond, "b t h w c -> b (t c) h w")
         x = self.latent_conditioning_before(x, cond)
-        x = rearrange(x, "b (t c) h w -> b t h w c", b=B)
+        x = rearrange(x, "b (t c) h w -> b t h w c", t=T_in)
         # latent conditioning before end
         x = self.enc_pos_embed(x)
         if self.num_global_vectors > 0:
@@ -1172,7 +1172,7 @@ class CuboidTransformerModelEarthNet2021x(nn.Module):
         if cond is not None:
             cond = rearrange(cond, "b t h w c -> b (t c) h w")
         dec_out = self.latent_conditioning_before(dec_out, cond)
-        dec_out = rearrange(dec_out, "b (t c) h w -> b t h w c", b=B)
+        dec_out = rearrange(dec_out, "b (t c) h w -> b t h w c", t=T_out)
         # latent conditioning after end
         dec_out = self.final_decoder(dec_out)
         out = self.dec_final_proj(dec_out)
