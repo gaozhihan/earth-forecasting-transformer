@@ -543,7 +543,6 @@ class CuboidEarthNet2021xPLModule(pl.LightningModule):
             model_in = in_seq
 
         pred_seq = self.torch_nn_module(model_in)
-        # TODO: the mask leads to blank prediction
         loss = F.mse_loss(pred_seq * out_mask, target_seq * out_mask)
         return pred_seq, loss, in_seq, target_seq, out_mask
 
