@@ -58,3 +58,5 @@ def test_earthformer_earthnet2021x():
     cond = torch.rand((batch_size, 30, 2, 2, pretrained_cfg.model.weather_conditioning_channels))
     pred = model(context, cond, verbose=True)
     torch.mean(pred).backward()
+
+test_earthformer_earthnet2021x()

@@ -1136,10 +1136,11 @@ class CuboidTransformerModelEarthNet2021x(nn.Module):
         """
         B, T_in, _, _, _ = x.shape
         T_out = self.target_shape[0]
-        # early conditioning
-        x = rearrange(x, "b t h w c -> b (t c) h w")
+        # conditioning
         if cond is not None:
             cond = rearrange(cond, "b t h w c -> b (t c) h w")
+        # early conditioning
+        x = rearrange(x, "b t h w c -> b (t c) h w")
         x = self.early_conditioning(x, cond)
         x = rearrange(x, "b (t c) h w -> b t h w c", t=T_in)
         # early conditioning end
@@ -1169,8 +1170,6 @@ class CuboidTransformerModelEarthNet2021x(nn.Module):
             dec_out = self.decoder(initial_z, mem_l)
         # latent conditioning after
         dec_out = rearrange(dec_out, "b t h w c -> b (t c) h w")
-        if cond is not None:
-            cond = rearrange(cond, "b t h w c -> b (t c) h w")
         dec_out = self.latent_conditioning_before(dec_out, cond)
         dec_out = rearrange(dec_out, "b (t c) h w -> b t h w c", t=T_out)
         # latent conditioning after end
