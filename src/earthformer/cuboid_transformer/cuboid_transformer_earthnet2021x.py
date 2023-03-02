@@ -791,7 +791,7 @@ class CuboidTransformerModelEarthNet2021x(nn.Module):
 
         # early conditioning
         x_channels = T_in * C_in
-        c_channels = T_in * weather_conditioning_channels
+        c_channels = (T_in + T_out) * weather_conditioning_channels
         hidden_channels = T_in * base_units
         if weather_conditioning_loc in ["all", "latent"]:
             self.early_conditioning = Identity_Conditioning()
@@ -836,7 +836,7 @@ class CuboidTransformerModelEarthNet2021x(nn.Module):
 
         # latent conditioning before
         x_channels = T_in * base_units
-        c_channels = T_in * weather_conditioning_channels
+        c_channels = (T_in + T_out) * weather_conditioning_channels
         hidden_channels = T_in * base_units
         if weather_conditioning_loc in ["all", "early"]:
             self.latent_conditioning_before = Identity_Conditioning()
@@ -953,7 +953,7 @@ class CuboidTransformerModelEarthNet2021x(nn.Module):
         )
         # latent conditioning after
         x_channels = T_out * base_units
-        c_channels = T_out * weather_conditioning_channels
+        c_channels = (T_in + T_out) * weather_conditioning_channels
         hidden_channels = T_out * base_units
         if weather_conditioning_loc in ["all", "early"]:
             self.latent_conditioning_after = Identity_Conditioning()
