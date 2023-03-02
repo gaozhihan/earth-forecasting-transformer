@@ -48,9 +48,11 @@ def config_cuboid_transformer(cfg):
 def test_earthformer_earthnet2021x():
     pretrained_cfg_path = os.path.join(cfg.root_dir, "scripts", "cuboid_transformer", "earthnet2021x", "cond_weather_data", "cfg.yaml")
     pretrained_cfg = OmegaConf.load(open(pretrained_cfg_path, "r"))
-    pretrained_cfg.model.weather_conditioning_loc="early"
-    pretrained_cfg.model.weather_conditioning="cat"
-    pretrained_cfg.model.weather_conditioning_channels=24
+    for cond_loc in ["early", "latent"]:
+        for cond_mode in ["cat", "FiLM", "xAttn"]:
+            pretrained_cfg.model.weather_conditioning_loc = cond_loc
+            pretrained_cfg.model.weather_conditioning = cond_mode
+    pretrained_cfg.model.weather_conditioning_channels = 24
     model = config_cuboid_transformer(cfg=pretrained_cfg)
     batch_size = 2
     context = torch.rand((batch_size, 10, 128, 128, 5))
