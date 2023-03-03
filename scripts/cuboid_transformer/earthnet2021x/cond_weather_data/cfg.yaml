@@ -6,7 +6,7 @@ dataset:
   val_ratio: 0.1
   train_val_split_seed: null
   fp16: false
-  dl_cloudmask: false
+  dl_cloudmask: true
   use_mask: true
   model_in_cat_mask: true
 layout:
