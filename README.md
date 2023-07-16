@@ -8,7 +8,7 @@ By [Zhihan Gao](https://scholar.google.com/citations?user=P6ACUAUAAAAJ&hl=en), [
 
 This repo is the official implementation of ["Earthformer: Exploring Space-Time Transformers for Earth System Forecasting"](https://www.amazon.science/publications/earthformer-exploring-space-time-transformers-for-earth-system-forecasting) that will appear in NeurIPS 2022. 
 
-Check our [poster](https://earthformer.s3.amazonaws.com/docs/Earthformer_poster_NeurIPS22.pdf).
+Check our [poster](https://earthformer.s3.us-west-2.amazonaws.com/docs/Earthformer_poster_NeurIPS2022.pdf).
 
 ## Tutorials
 
@@ -91,7 +91,7 @@ $\frac{d^2\boldsymbol{x}\_{i}}{dt^2} = - \sum\_{j\neq i}\frac{G m\_j (\boldsymbo
 
 where $\boldsymbol{x}\_{i}$ is the spatial coordinates of the $i$-th digit, $G$ is the gravitational constant, $m\_j$ is the mass of the $j$-th digit, $r$ is a constant representing the power scale in the gravitational law, $d\_{\text{soft}}$ is a small softening distance that ensures numerical stability.
 
-The N-body MNIST dataset we used in the paper can be downloaded from https://earthformer.s3.amazonaws.com/nbody/nbody_paper.zip .
+The N-body MNIST dataset we used in the paper can be downloaded from https://earthformer.s3.us-west-2.amazonaws.com/nbody/nbody_paper.zip .
 
 In addition, you can also use the following script for downloading / extracting the data:
 ```bash
@@ -160,9 +160,9 @@ Find detailed instructions in how to train the models or running inference with 
 
 | Dataset       | Script Folder                                            | Pretrained Weights                                                                                                     | Config                                                                              |
 |---------------|----------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
-| SEVIR         | [scripts](./scripts/cuboid_transformer/sevir)            | [link](https://earthformer.s3.amazonaws.com/pretrained_checkpoints/earthformer_sevir.pt)        | [config](./scripts/cuboid_transformer/sevir/earthformer_sevir_v1.yaml)              |
-| ICAR-ENSO     | [scripts](./scripts/cuboid_transformer/enso)             | [link](https://earthformer.s3.amazonaws.com/pretrained_checkpoints/earthformer_icarenso2021.pt) | [config](./scripts/cuboid_transformer/enso/earthformer_enso_v1.yaml)                |
-| EarthNet2021  | [scripts](./scripts/cuboid_transformer/earthnet_w_meso)  | [link](https://earthformer.s3.amazonaws.com/pretrained_checkpoints/earthformer_earthnet2021.pt) | [config](./scripts/cuboid_transformer/earthnet_w_meso/earthformer_earthnet_v1.yaml) |
+| SEVIR         | [scripts](./scripts/cuboid_transformer/sevir)            | [link](https://earthformer.s3.us-west-2.amazonaws.com/pretrained_checkpoints/earthformer_sevir.pt)        | [config](./scripts/cuboid_transformer/sevir/earthformer_sevir_v1.yaml)              |
+| ICAR-ENSO     | [scripts](./scripts/cuboid_transformer/enso)             | [link](https://earthformer.s3.us-west-2.amazonaws.com/pretrained_checkpoints/earthformer_icarenso2021.pt) | [config](./scripts/cuboid_transformer/enso/earthformer_enso_v1.yaml)                |
+| EarthNet2021  | [scripts](./scripts/cuboid_transformer/earthnet_w_meso)  | [link](https://earthformer.s3.us-west-2.amazonaws.com/pretrained_checkpoints/earthformer_earthnet2021.pt) | [config](./scripts/cuboid_transformer/earthnet_w_meso/earthformer_earthnet_v1.yaml) |
 | N-body MNIST  | [scripts](./scripts/cuboid_transformer/nbody)            | -                                                                                                                      | -                                                                                   |
 
 ## Citing Earthformer
