@@ -21,11 +21,14 @@ if isinstance(model_cfg["cross_pattern"], str):
 else:
     dec_cross_attn_patterns = OmegaConf.to_container(model_cfg["cross_pattern"])
 
+input_shape = model_cfg["input_shape"]
+target_shape = model_cfg["target_shape"]
+
 model = CuboidTransformerModel(
-    input_shape=model_cfg["input_shape"],
-    target_shape=model_cfg["target_shape"],
+    input_shape=input_shape,
+    target_shape=target_shape,
     base_units=model_cfg["base_units"],
-    # block_units=model_cfg["block_units"],
+    block_units=model_cfg.get("block_units", None),
     scale_alpha=model_cfg["scale_alpha"],
     enc_depth=model_cfg["enc_depth"],
     dec_depth=model_cfg["dec_depth"],
@@ -79,8 +82,6 @@ model = CuboidTransformerModel(
     norm_init_mode=model_cfg["norm_init_mode"],
 )
 
-input_shape = model_cfg["input_shape"]
-target_shape = model_cfg["target_shape"]
 batch_size = 2
 data = torch.rand((batch_size, *input_shape))
 out = model(data)
