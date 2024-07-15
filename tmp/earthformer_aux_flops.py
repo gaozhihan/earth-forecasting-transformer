@@ -15,7 +15,7 @@ if test_dataset_name == "earthnet2021":
     #                              "scripts", "cuboid_transformer", "earthnet_w_meso", "earthformer_earthnet_v1.yaml")
     # cfg_file_path = os.path.join(os.path.dirname(__file__), "..",
     #                              "scripts", "cuboid_transformer", "earthnet_w_meso", "cfg.yaml")
-    cfg_file_path = os.path.join(os.path.dirname(__file__), "cuboid_flops_cfg.yaml")
+    cfg_file_path = os.path.join(os.path.dirname(__file__), "earthformer_aux_flops_cfg.yaml")
 else:
     raise NotImplementedError
 
