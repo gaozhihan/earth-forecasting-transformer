@@ -11,8 +11,11 @@ from earthformer.utils.utils import count_num_params
 test_dataset_name = "earthnet2021"
 
 if test_dataset_name == "earthnet2021":
-    cfg_file_path = os.path.join(os.path.dirname(__file__), "..", "scripts", "earthnet_w_meso," "earthformer_earthnet_v1.yaml")
-    # cfg_file_path = os.path.join(os.path.dirname(__file__), "..", "scripts", "earthnet_w_meso", "cfg.yaml")
+    # cfg_file_path = os.path.join(os.path.dirname(__file__), "..",
+    #                              "scripts", "cuboid_transformer", "earthnet_w_meso", "earthformer_earthnet_v1.yaml")
+    # cfg_file_path = os.path.join(os.path.dirname(__file__), "..",
+    #                              "scripts", "cuboid_transformer", "earthnet_w_meso", "cfg.yaml")
+    cfg_file_path = os.path.join(os.path.dirname(__file__), "cuboid_flops_cfg.yaml")
 else:
     raise NotImplementedError
 
@@ -86,6 +89,12 @@ else:
     raise ValueError
 
 model_cfg = get_model_config()
+if cfg_file_path is not None:
+    oc_from_file = OmegaConf.load(open(cfg_file_path, "r"))
+    model_cfg = OmegaConf.merge(get_model_config(), oc_from_file.model)
+model_cfg = OmegaConf.to_object(model_cfg)
+model_cfg["checkpoint_level"] = 0
+
 num_blocks = len(model_cfg["enc_depth"])
 if isinstance(model_cfg["self_pattern"], str):
     enc_attn_patterns = [model_cfg["self_pattern"]] * num_blocks
@@ -167,8 +176,9 @@ if test_dataset_name == "earthnet2021":
     height = 128
     width = 128
     channels = 4
-    h_aux = 128
-    w_aux = 128
+    h_aux = height
+    w_aux = width
+    c_aux = 7
 else:
     raise NotImplementedError
 
@@ -177,12 +187,12 @@ device = torch.device("cpu")
 
 in_seq = torch.rand((1, in_len, height, width, channels)).to(device)
 out_seq = torch.rand((1, out_len, height, width, channels)).to(device)
-in_aux = torch.rand((1, in_len, h_aux, w_aux, channels)).to(device)
-out_aux = torch.rand((1, out_len, h_aux, w_aux, channels)).to(device)
+in_aux = torch.rand((1, in_len, h_aux, w_aux, c_aux)).to(device)
+out_aux = torch.rand((1, out_len, h_aux, w_aux, c_aux)).to(device)
 flops = FlopCountAnalysis(model=model.to(device),
                           inputs=(in_seq, in_aux, out_aux))
 output = model.to(device)(in_seq, in_aux, out_aux, verbose=True)
 # print(f"flops = {flops.total()}")
 print(f"flops = {flops.total():,}")
-print(f"#params = {count_num_params(model)}")
-# print(f"#params = {count_num_params(model):,}")
+# print(f"#params = {count_num_params(model)}")
+print(f"#params = {count_num_params(model):,}")
