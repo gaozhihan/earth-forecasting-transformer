@@ -7,6 +7,7 @@ import sys
 import functools
 import uuid
 import requests
+from torch import nn
 
 
 if not sys.platform.startswith('win32'):
@@ -257,3 +258,10 @@ def download(url: str,
                       .format(repr(e), retries, 's' if retries > 1 else ''))
 
     return fname
+
+
+def count_num_params(nn_module: nn.Module, requires_grad: bool = True):
+    if requires_grad:
+        return sum(p.numel() for p in nn_module.parameters() if p.requires_grad)
+    else:
+        return sum(p.numel() for p in nn_module.parameters())
